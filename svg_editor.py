@@ -18,6 +18,7 @@ class MultiSVGCreator:
         "white": "rgb(255, 255, 255)"
     }
 
+    #functionalities
     def create_new_drawing(self, filename:str=None, size=('1244', '1756px')):
         """        
         Create or modify an SVG drawing. Resizes the existing SVG if it exists, or creates a new one.
@@ -33,9 +34,18 @@ class MultiSVGCreator:
         self.SIZE = size
         self.drawings[filename] = svgwrite.Drawing(filename=filename, size=size)     
 
+    def save_all(self):
+        """
+        Save all SVG drawings to their respective files.
+        """
+        for drawing in self.drawings.values():
+            drawing.save()
+
+    #getters and setters
     def get_size(self):
         return self.SIZE
     
+    #geometry
     def add_rectangle(self, filename, insert, size, fill='none', stroke='black'):
         """
         Add a rectangle to an SVG drawing.
@@ -62,6 +72,7 @@ class MultiSVGCreator:
         if filename in self.drawings:
             self.drawings[filename].add(self.drawings[filename].circle(center=center, r=radius, fill=fill, stroke=stroke))
 
+    #image
     def link_image(self, filename, insert, size, href):
         """
         Link an image to an SVG drawing.
@@ -211,12 +222,32 @@ class MultiSVGCreator:
         # Embed the image data in the SVG
         self.drawings[filename].add(self.drawings[filename].image(href=data_uri, insert=insert, size=size))
 
-    def save_all(self):
+    #text
+    def add_text(self, filename, insert, text, font_size='20px', font_family='Arial', fill_color='rgb(0, 0, 0)', stroke_color='rgb(0, 0, 0)', stroke_width=1.5):
         """
-        Save all SVG drawings to their respective files.
+        Adds text to an SVG drawing using the svgwrite library.
+
+        :param filename: The filename of the SVG to add the text to.
+        :param insert: tuple of the bottom-left x and y -coordinate for the text's position as a tuple (x,y)
+        :param text: The text content to add.
+        :param font_size: The font size of the text.
+        :param font_family: The font family of the text.
+        :param fill_color: The fill color of the text.
+        :param stroke_color: The stroke color of the text.
+        :param stroke_width: The stroke width of the text.
         """
-        for drawing in self.drawings.values():
-            drawing.save()
+        if filename not in self.drawings:
+            print(f"Drawing with filename {filename} does not exist.")
+            return
+
+        # Construct the style string with fill color, stroke color, and stroke width
+        style = f'font-size: {font_size}; font-family: {font_family}; fill: {fill_color}; stroke: {stroke_color}; stroke-width: {stroke_width}px;'
+
+        # Create the text element with the specified attributes and style
+        text_element = svgwrite.text.Text(text, insert=insert, style=style)
+
+        # Add the text element to the drawing
+        self.drawings[filename].add(text_element) 
 
 # Usage example            
 if __name__ == '__main__':
@@ -235,5 +266,7 @@ if __name__ == '__main__':
     svg_creator.embed_cv2_image(filename = 'rendered_svg_files/page_1.svg', insert= (0,200), size =('100px', '100px'), cv2_image = cv2_image)
     svg_creator.embed_cv2_image_adjustable_resolution(filename = 'rendered_svg_files/page_1.svg', insert= (0,300), size =('100px', '100px'), cv2_image = cv2_image, constant_proportions= True, quality_factor= 3)
 
+
+    svg_creator.add_text(filename = 'rendered_svg_files/page_1.svg', text = "deneme", insert= (0,80))
     svg_creator.save_all()
 
