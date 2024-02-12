@@ -2,8 +2,6 @@ import base64
 import svgwrite
 import cv2
 from io import BytesIO
-import os 
-import xml.etree.ElementTree as ET
 from PIL import Image
 
 class MultiSVGCreator:
@@ -44,6 +42,9 @@ class MultiSVGCreator:
     #getters and setters
     def get_size(self):
         return self.SIZE
+    
+    def get_color(self, color_name):
+        return MultiSVGCreator.COLOR_PALETTE[color_name]
     
     #geometry
     def add_rectangle(self, filename, insert, size, fill='none', stroke='black'):
@@ -249,14 +250,65 @@ class MultiSVGCreator:
         # Add the text element to the drawing
         self.drawings[filename].add(text_element) 
 
+    def add_text_with_width_limit(self, filename, insert, text, font_size='20px', font_family='Arial', fill_color='rgb(0, 0, 0)', stroke_color='rgb(0, 0, 0)', stroke_width=1.5, width_limit=100, line_height=20):
+        """
+        Adds text to an SVG drawing with a width limit, breaking the text into multiple lines if necessary.
+
+        :param filename: The filename of the SVG to add the text to.
+        :param insert: tuple of the bottom-left x and y -coordinate for the first line's position as a tuple (x,y)
+        :param text: The text content to add.
+        :param font_size: The font size of the text.
+        :param font_family: The font family of the text.
+        :param fill_color: The fill color of the text.
+        :param stroke_color: The stroke color of the text.
+        :param stroke_width: The stroke width of the text.
+        :param width_limit: The maximum number of characters in a line before wrapping.
+        :param line_height: The height of each line of text.
+        """
+        if filename not in self.drawings:
+            print(f"Drawing with filename {filename} does not exist.")
+            return
+
+        # Style string
+        style = f'font-size: {font_size}; font-family: {font_family}; fill: {fill_color}; stroke: {stroke_color}; stroke-width: {stroke_width}px;'
+
+        # Initialize variables to hold lines of text
+        lines = []
+        line = ""
+        counter = 0
+
+        # Break text into lines based on width_limit
+        for char in text:
+            line += char
+            counter += 1
+            if counter >= width_limit and char == " ":
+                lines.append(line.strip())
+                line = ""
+                counter = 0
+        if line:
+            lines.append(line.strip())  # Add any remaining text as a new line
+
+        # Add lines of text to the SVG
+        text_element = svgwrite.text.Text("", insert=insert, style=style)
+        dy = 0
+        for line_text in lines:
+            tspan = svgwrite.text.TSpan(line_text, x=[insert[0]], dy=[dy])
+            text_element.add(tspan)
+            dy = line_height  # Increment y position for each new line
+
+        self.drawings[filename].add(text_element)
+
+
 # Usage example            
 if __name__ == '__main__':
     svg_creator = MultiSVGCreator()
     svg_creator.create_new_drawing(filename= 'rendered_svg_files/page_1.svg')
     #svg_creator.add_circle('example1.svg', (100, 100), 80, fill='green', stroke='orange')
 
-    cover_page_template_href = "C:\\Users\\Levovo20x\\Documents\\GitHub\\SVG-simple\\templates\\cover_page_template.png"
-    svg_creator.embed_image(filename = 'rendered_svg_files/page_1.svg', insert=(0,0), size=svg_creator.get_size(), href = cover_page_template_href)
+    cover_page_template_href = "C:\\Users\\Levovo20x\\Documents\\GitHub\\SVG-simple\\templates\\cover_page_template_300DPI.png"
+    cv2_image = cv2.imread(cover_page_template_href, cv2.IMREAD_UNCHANGED)
+    svg_creator.embed_cv2_image_adjustable_resolution(filename = 'rendered_svg_files/page_1.svg', insert= (0,0), size = svg_creator.get_size() , cv2_image = cv2_image, constant_proportions= True, quality_factor= 2)
+    #svg_creator.embed_image(filename = 'rendered_svg_files/page_1.svg', insert=(0,0), size=svg_creator.get_size(), href = cover_page_template_href)
 
     href= "C:\\Users\\Levovo20x\\Documents\\GitHub\\SVG-simple\\nature.png"
     svg_creator.embed_image(filename='rendered_svg_files/page_1.svg', insert=(0,0),size=('100px', '100px'), href=href)
@@ -267,6 +319,10 @@ if __name__ == '__main__':
     svg_creator.embed_cv2_image_adjustable_resolution(filename = 'rendered_svg_files/page_1.svg', insert= (0,300), size =('100px', '100px'), cv2_image = cv2_image, constant_proportions= True, quality_factor= 3)
 
 
-    svg_creator.add_text(filename = 'rendered_svg_files/page_1.svg', text = "deneme", insert= (0,80))
+    svg_creator.add_text(filename = 'rendered_svg_files/page_1.svg', text = "deneme", insert= (0,80), fill_color = svg_creator.get_color('dark_blue'), stroke_color= svg_creator.get_color('dark_blue'), stroke_width=1)
+    long_text = """
+    Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Nunc scelerisque viverra mauris in. Volutpat commodo sed egestas egestas fringilla phasellus. Aliquam sem fringilla ut morbi tincidunt augue interdum. Ac placerat vestibulum lectus mauris ultrices eros in cursus turpis. Luctus accumsan tortor posuere ac ut consequat semper viverra nam. Convallis posuere morbi leo urna. Mattis molestie a iaculis at erat pellentesque. Sapien et ligula ullamcorper malesuada proin libero nunc. Ac tortor dignissim convallis aenean et tortor. Id aliquet lectus proin nibh nisl. Tempor id eu nisl nunc mi. Ipsum suspendisse ultrices gravida dictum fusce ut placerat orci nulla. Id consectetur purus ut faucibus pulvinar elementum integer. Adipiscing vitae proin sagittis nisl rhoncus mattis.
+    """
+    svg_creator.add_text_with_width_limit(filename =  'rendered_svg_files/page_1.svg', insert =(300,500), text = long_text, font_size='20px', font_family='Arial', fill_color='rgb(0, 0, 0)', stroke_color='rgb(0, 0, 0)', stroke_width=1.5, width_limit=100, line_height=20)
     svg_creator.save_all()
 
