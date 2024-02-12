@@ -2,20 +2,52 @@ import base64
 import svgwrite
 import cv2
 from io import BytesIO
+import os 
+import xml.etree.ElementTree as ET
+
 
 class MultiSVGCreator:
     def __init__(self):
         self.drawings = {}
 
-    def create_new_drawing(self, filename, size=('2480px', '3508px')):        
-        """        
-        Create a new SVG drawing. By default, the size is set to A4 paper size with 300 DPI (2480x3508px)
-        
+    def __load_and_resize_existing_svg(self, file_path, new_size):
+        """
+        Load an existing SVG file and resize it to the new dimensions.
+
+        :param filename: The path to the existing SVG file.
+        :param new_size: A tuple (width, height) for the new size of the SVG canvas.
+        """
+        if os.path.exists(file_path):
+            tree = ET.parse(file_path)
+            root = tree.getroot()
+            root.attrib['width'], root.attrib['height'] = new_size
+            return ET.tostring(root, encoding='unicode')
+        else:
+            return None
+
+    def create_new_drawing(self, filename:str=None, template_path:str = None, size=('2480px', '3508px')):
+        """
+        Create or modify an SVG drawing. Resizes the existing SVG if it exists, or creates a new one.
+
         :param filename: The name of the file to save the SVG as.
         :param size: The size of the SVG canvas.
         """
-        if filename not in self.drawings:
+        if filename in self.drawings:
+            raise Exception(f"There is already a svg file named as {filename}")        
+
+        if template_path != None: 
+            #build on existing template
+            existing_svg_content = self.__load_and_resize_existing_svg(file_path = template_path, new_size =  size)
+            if existing_svg_content:
+                # Initialize a new drawing with the modified content of the existing SVG
+                self.drawings[filename] = svgwrite.Drawing(filename=filename, size=size)
+                self.drawings[filename].add(svgwrite.base.SVG(existing_svg_content))
+            else:
+                raise Exception(f"There is no svg template at path '{template_path}' ")
+        else:
+            #generate a brand-new drawing
             self.drawings[filename] = svgwrite.Drawing(filename, size=size)
+
 
     def add_rectangle(self, filename, insert, size, fill='none', stroke='black'):
         """
@@ -118,10 +150,10 @@ class MultiSVGCreator:
 # Usage example            
 if __name__ == '__main__':
     svg_creator = MultiSVGCreator()
-    svg_creator.create_new_drawing('example2.svg')
+    svg_creator.create_new_drawing(filename= 'example2.svg', template_path="svg_templates/cover_page_template.svg")
     #svg_creator.add_circle('example1.svg', (100, 100), 80, fill='green', stroke='orange')
 
-    href= "C:\\Users\\Levovo20x\\Documents\\GitHub\\SVG-simple\\free-nature-images.jpg"
+    href= "C:\\Users\\Levovo20x\\Documents\\GitHub\\SVG-simple\\nature.png"
     svg_creator.embed_image(filename="example2.svg", insert=(0,0),size=('1200px', '630px'), href=href)
 
     cv2_image = cv2.imread("nature.png", cv2.IMREAD_COLOR)
